@@ -1,0 +1,49 @@
+name: Celine Watch
+
+on:
+  schedule:
+    # toutes les 5 minutes (GitHub peut retarder de 5 a 20 min aux heures de pointe)
+    - cron: "*/5 * * * *"
+  workflow_dispatch:        # permet de lancer a la main depuis l'onglet Actions
+
+permissions:
+  contents: write           # necessaire pour enregistrer l'etat entre deux passages
+
+concurrency:
+  group: celine-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dependances
+        run: pip install requests==2.32.3 beautifulsoup4==4.12.3
+
+      - name: Verifier les pages
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          STATE_DIR: state
+          RUN_ONCE: "true"
+          NOTIFY_ALL_CHANGES: "false"
+          TZ: Europe/Paris
+        run: python watch.py
+
+      - name: Enregistrer l'etat
+        run: |
+          git config user.name  "celine-watch"
+          git config user.email "celine-watch@users.noreply.github.com"
+          git add state
+          if git diff --staged --quiet; then
+            echo "Rien a enregistrer."
+          else
+            git commit -m "maj etat $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
