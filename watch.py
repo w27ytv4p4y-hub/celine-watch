@@ -6,6 +6,7 @@ nouvelles dates).
 """
 
 import base64
+import concurrent.futures
 import difflib
 import hashlib
 import json
@@ -229,11 +230,15 @@ def extract_text(html):
     return [l for l in lines if l]
 
 
+FETCH_TIMEOUT = int(os.environ.get("FETCH_TIMEOUT", "12"))
+MAX_PARALLEL = int(os.environ.get("MAX_PARALLEL", "8"))
+
+
 def fetch(url):
     r = requests.get(url, headers={
         "User-Agent": UA,
         "Accept-Language": "fr-FR,fr;q=0.9",
-    }, timeout=30)
+    }, timeout=FETCH_TIMEOUT)
     r.raise_for_status()
     r.encoding = r.apparent_encoding or "utf-8"
     return r.text
@@ -273,17 +278,30 @@ def keyword_hits(lines):
 # ---------------------------------------------------------------- core
 
 
-def check_page(label, url, failures):
-    try:
-        lines = extract_text(fetch(url))
-    except Exception as e:
+def fetch_all(pages):
+    """Recupere toutes les pages en parallele. Renvoie url -> lignes ou Exception."""
+    out = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_PARALLEL) as pool:
+        futures = {pool.submit(fetch, url): url for _, url in pages}
+        for fut in concurrent.futures.as_completed(futures):
+            url = futures[fut]
+            try:
+                out[url] = extract_text(fut.result())
+            except Exception as e:
+                out[url] = e
+    return out
+
+
+def check_page(label, url, failures, result):
+    if isinstance(result, Exception):
         failures[url] = failures.get(url, 0) + 1
-        log(f"   {label}: erreur ({e.__class__.__name__})")
+        log(f"   {label}: erreur ({result.__class__.__name__})")
         if failures[url] == 6:
             notify("Celine Watch - page inaccessible",
                    f"**{label}** ne repond plus depuis ~30 min.\n\n{url}",
                    priority="low", tags="warning", click=url)
         return
+    lines = result
     failures[url] = 0
 
     old = load_state(url)
@@ -354,10 +372,12 @@ def main():
 
     failures = {}
     while True:
-        log("--- tour de verification")
+        debut = time.time()
+        log(f"--- tour de verification ({len(PAGES)} pages, {MAX_PARALLEL} en parallele)")
+        resultats = fetch_all(PAGES)
         for label, url in PAGES:
-            check_page(label, url, failures)
-            time.sleep(1)
+            check_page(label, url, failures, resultats[url])
+        log(f"--- tour termine en {time.time() - debut:.0f}s")
         if RUN_ONCE:
             log("--- termine")
             return
