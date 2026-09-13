@@ -91,8 +91,7 @@ KEYWORDS = [
     "remise en circulation", "places liberees", "liberation de places",
     "resale", "on sale", "tickets available", "new dates",
     "now available", "released", "additional dates", "may 2027", "mai 2027",
-    "acheter des billets", "revente officielle", "marketplace", "epuise",
-    "complet", "sold out", "buy tickets",
+    "acheter des billets", "revente officielle", "marketplace",
 ]
 
 # Les 26 dates de la residence (AAAA-MM-JJ)
