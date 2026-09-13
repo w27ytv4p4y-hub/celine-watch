@@ -231,7 +231,11 @@ def extract_text(html):
 
 
 FETCH_TIMEOUT = int(os.environ.get("FETCH_TIMEOUT", "12"))
-MAX_PARALLEL = int(os.environ.get("MAX_PARALLEL", "8"))
+MAX_PARALLEL = int(os.environ.get("MAX_PARALLEL", "4"))
+# Les pages AXS ne sont verifiees qu'une fois toutes les N minutes, pour ne pas
+# marteler leur site (protection anti-bot). Les pages d'annonces restent a
+# chaque passage.
+AXS_INTERVAL_MIN = int(os.environ.get("AXS_INTERVAL_MIN", "30"))
 
 
 def fetch(url):
@@ -263,6 +267,22 @@ def load_state(url):
 def save_state(url, lines):
     with open(state_path(url), "w", encoding="utf-8") as f:
         json.dump({"lines": lines, "seen": datetime.now().isoformat()}, f)
+
+
+def axs_a_verifier():
+    """Vrai si le tour AXS est du (>= AXS_INTERVAL_MIN depuis le dernier)."""
+    p = os.path.join(STATE_DIR, "_axs_last.json")
+    now = time.time()
+    try:
+        with open(p, encoding="utf-8") as f:
+            last = json.load(f).get("t", 0)
+    except Exception:
+        last = 0
+    if now - last < AXS_INTERVAL_MIN * 60:
+        return False
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump({"t": now, "iso": datetime.now().isoformat()}, f)
+    return True
 
 
 def keyword_hits(lines):
@@ -373,9 +393,16 @@ def main():
     failures = {}
     while True:
         debut = time.time()
-        log(f"--- tour de verification ({len(PAGES)} pages, {MAX_PARALLEL} en parallele)")
-        resultats = fetch_all(PAGES)
-        for label, url in PAGES:
+        avec_axs = axs_a_verifier()
+        if avec_axs:
+            tour = PAGES
+            log(f"--- tour complet ({len(tour)} pages, AXS inclus)")
+        else:
+            tour = [(l, u) for l, u in PAGES if u not in PAGE_DATE]
+            log(f"--- tour annonces ({len(tour)} pages, AXS dans "
+                f"<= {AXS_INTERVAL_MIN} min)")
+        resultats = fetch_all(tour)
+        for label, url in tour:
             check_page(label, url, failures, resultats[url])
         log(f"--- tour termine en {time.time() - debut:.0f}s")
         if RUN_ONCE:
