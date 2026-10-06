@@ -9,14 +9,10 @@ on:
 permissions:
   contents: write           # necessaire pour enregistrer l'etat entre deux passages
 
-concurrency:
-  group: celine-watch
-  cancel-in-progress: true
-
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
