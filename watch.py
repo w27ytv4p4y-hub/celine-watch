@@ -91,7 +91,7 @@ KEYWORDS = [
     "bourse d'echange", "echange entre fans", "fan-to-fan",
     "remise en circulation", "places liberees", "liberation de places",
     "resale", "on sale", "tickets available", "new dates",
-    "now available", "released", "additional dates", "may 2027", "mai 2027",
+    "now available", "released", "additional dates",
     "acheter des billets", "revente officielle", "marketplace",
 ]
 
