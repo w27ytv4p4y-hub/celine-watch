@@ -205,7 +205,6 @@ def notify(title, message, priority="default", tags="ticket", click=None,
         "Title": rfc2047(title),
         "Priority": priority,
         "Tags": tags,
-        "Markdown": "yes",
     }
     if click:
         headers["Click"] = click
@@ -318,7 +317,7 @@ def check_page(label, url, failures, result):
         log(f"   {label}: erreur ({result.__class__.__name__})")
         if failures[url] == 6:
             notify("Celine Watch - page inaccessible",
-                   f"**{label}** ne repond plus depuis ~30 min.\n\n{url}",
+                   f"{label} ne repond plus depuis ~30 min.\n\n{url}",
                    priority="low", tags="warning", click=url)
         return
     lines = result
@@ -348,13 +347,13 @@ def check_page(label, url, failures, result):
         if url in PAGE_DATE and PAGE_DATE[url] not in dates:
             dates = [PAGE_DATE[url]] + dates
         if dates:
-            dates_txt = ("\n\n📅 **Concerts cites :** "
+            dates_txt = ("\n\n📅 Concerts cites : "
                          + ", ".join(fmt_date(d) for d in dates))
         else:
             dates_txt = "\n\n📅 Aucune date de concert precise dans le texte."
         log(f"   {label}: ALERTE ({len(hot)} ligne(s) cle, {len(dates)} date(s))")
         notify(f"🎟️ {label}",
-               f"**Du nouveau sur la billetterie :**\n\n{body}{dates_txt}",
+               f"Du nouveau sur la billetterie :\n\n{body}{dates_txt}",
                priority="urgent", tags="rotating_light,ticket", click=url,
                actions=actions_header(url))
     elif added and NOTIFY_ALL_CHANGES:
