@@ -334,7 +334,9 @@ def check_page(label, url, failures, result):
     added = [l for l in added if len(l) > 3]
 
     deja_vu = lignes_connues(sauf=url)
-    hot = [l for l in keyword_hits(added) if l not in deja_vu]
+    # Seules les longues phrases d'annonce sont filtrees : un libelle court
+    # ("Revente officielle") doit alerter sur chaque date ou il apparait.
+    hot = [l for l in keyword_hits(added) if len(l) < 60 or l not in deja_vu]
     save_state(url, lines)
 
     if hot:
