@@ -31,8 +31,6 @@ NOTIFY_ALL_CHANGES = os.environ.get("NOTIFY_ALL_CHANGES", "false").lower() == "t
 PAGES = [
     ("Plenitude - Celine Dion 2027",
      "https://www.plenitudearena.com/evenement/celine-dion-2027-fr/"),
-    ("Plenitude - Celine Dion 2026",
-     "https://www.plenitudearena.com/evenement/2026-celine-dion/"),
     ("Plenitude - Mes billets / revente",
      "https://www.plenitudearena.com/mes-billets/"),
     ("Plenitude - Actualites",
@@ -45,8 +43,6 @@ PAGES = [
      "https://help.ticketmaster.fr/hc/en-us/articles/45193915141905-C%C3%89LINE-DION-PARIS-2026-2027"),
     ("Plenitude - annonce revente officielle",
      "https://www.plenitudearena.com/en/official-resale-of-celine-dion-tickets-for-paris-2026-the-service-is-now-open-at-plenitude-arena/"),
-    ("AXS - serie Paris 2026",
-     "https://www.axs.com/fr/series/33807/celine-dion-paris-2026-tickets?skin=celine"),
     ("AXS - serie Paris 2027",
      "https://www.axs.com/fr/series/33315/celine-dion-paris-2027-tickets?skin=celine"),
 ]
@@ -54,21 +50,6 @@ PAGES = [
 # Pages AXS par date de concert : (date ISO, URL). Chaque page liste les
 # offres ouvertes pour CE soir-la (Standard, Premium, revente...).
 AXS_PAR_DATE = [
-    ("2026-09-16", "https://www.axs.com/fr/events/1381037"),
-    ("2026-09-18", "https://www.axs.com/fr/events/1381048"),
-    ("2026-09-19", "https://www.axs.com/fr/events/1381038"),
-    ("2026-09-23", "https://www.axs.com/fr/events/1381039"),
-    ("2026-09-25", "https://www.axs.com/fr/events/1381050"),
-    ("2026-09-26", "https://www.axs.com/fr/events/1381040"),
-    ("2026-09-30", "https://www.axs.com/fr/events/1381041"),
-    ("2026-10-02", "https://www.axs.com/fr/events/1381052"),
-    ("2026-10-03", "https://www.axs.com/fr/events/1381042"),
-    ("2026-10-07", "https://www.axs.com/fr/events/1381044"),
-    ("2026-10-09", "https://www.axs.com/fr/events/1381053"),
-    ("2026-10-10", "https://www.axs.com/fr/events/1381045"),
-    ("2026-10-14", "https://www.axs.com/fr/events/1381046"),
-    ("2026-10-16", "https://www.axs.com/fr/events/1381055"),
-    ("2026-10-17", "https://www.axs.com/fr/events/1381057"),
     ("2027-05-08", "https://www.axs.com/fr/events/1444112/slug/promopage/82430"),
     ("2027-05-12", "https://www.axs.com/fr/events/1444113/slug/promopage/82431"),
     ("2027-05-14", "https://www.axs.com/fr/events/1444114/slug/promopage/82432"),
@@ -284,6 +265,20 @@ def axs_a_verifier():
     return True
 
 
+def lignes_connues(sauf=None):
+    """Toutes les lignes deja enregistrees sur les AUTRES pages surveillees.
+    Evite d'alerter quand un texte deja publie ailleurs change simplement de
+    page (ex. page 2026 remplacee par le contenu de la page 2027)."""
+    vues = set()
+    for _, u in PAGES:
+        if u == sauf:
+            continue
+        st = load_state(u)
+        if st:
+            vues.update(st.get("lines", []))
+    return vues
+
+
 def keyword_hits(lines):
     hits = []
     for line in lines:
@@ -338,7 +333,8 @@ def check_page(label, url, failures, result):
     added = [l[1:].strip() for l in added]
     added = [l for l in added if len(l) > 3]
 
-    hot = keyword_hits(added)
+    deja_vu = lignes_connues(sauf=url)
+    hot = [l for l in keyword_hits(added) if l not in deja_vu]
     save_state(url, lines)
 
     if hot:
